@@ -1,14 +1,12 @@
 ﻿#version 330 core
 in vec3 FragPos;
 in vec3 Normal;
-in vec2 TexCoord;
 
 uniform vec3 LightPos;
 uniform vec3 LightColor;
 uniform vec3 ObjectColor;
 uniform vec3 ViewPosTransform;
 uniform mat4 LightTransform;
-uniform sampler2D texture1;
 
 out vec4 FragColor;
 
@@ -31,7 +29,7 @@ void main()
    vec3 Specular = SpecularColor * LightColor;
 
    vec3 SubResult = Ambient + Diffuse + Specular;
-   vec3 Result = vec3(SubResult.x, SubResult.y, SubResult.z);
+   vec3 Result = vec3(SubResult.x * ObjectColor.x, SubResult.y * ObjectColor.y, SubResult.z * ObjectColor.z);
    FragColor = vec4(Result, 1.0);
-   FragColor = texture(texture1, TexCoord) * FragColor;
+
 }

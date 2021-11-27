@@ -1,36 +1,41 @@
 #include "readObj2.h"
 
-void ReadObj2(const std::string objfilename, std::vector<glm::vec4>& vertex, std::vector<glm::vec4>& normalVertex)
+void ReadObj2(const std::string objfilename, std::vector<glm::vec4>& vertex, std::vector<glm::vec4>& normalVertex, std::vector<glm::vec4>& vtVertex)
 {
 	int lineCount = 0;
 	std::string line;
 	std::string check[6];
 	int vertexNum = 0;
 	int normalNum = 0;
+	int CoorNum = 0;
 	std::ifstream inFile(objfilename);
 	std::vector<glm::vec4>face;
 	std::vector<glm::vec4>Noramlface;
+	std::vector<glm::vec4>vtface;
 
 	while (std::getline(inFile, line)) {
 		if (line[0] == 'v' && line[1] == ' ') {
 			vertexNum++;
 			normalNum++;
+			CoorNum++;
 		}
 		std::cout << line << std::endl;
 	}
 	glm::vec4* vertexData = new glm::vec4[vertexNum];
 	glm::vec4* normalData = new glm::vec4[normalNum];
+	glm::vec4* vtData = new glm::vec4[CoorNum];
 
 	inFile.clear();
 	inFile.seekg(0, std::ios::beg);
 	vertexNum = 0;
 	normalNum = 0;
+	CoorNum = 0;
 	char head[2];
 	int faceNum[4];
 	int vnNum[4];
+	int vtNum[4];
 	std::string nt;
 	char n;
-	int t;
 	char s;
 	while (inFile >> std::noskipws >> head[0]) {
 		if (head[0] == 'v') {
@@ -43,6 +48,10 @@ void ReadObj2(const std::string objfilename, std::vector<glm::vec4>& vertex, std
 				inFile >> std::skipws >> normalData[normalNum].x >> normalData[normalNum].y >> normalData[normalNum].z;
 				normalNum++;
 			}
+			else if (head[1] == 't') {
+				inFile >> std::skipws >> vtData[CoorNum].x >> vtData[CoorNum].y >> vtData[CoorNum].z;
+				CoorNum++;
+			}
 
 			head[1] = '\0';
 		}
@@ -51,34 +60,35 @@ void ReadObj2(const std::string objfilename, std::vector<glm::vec4>& vertex, std
 			if (head[1] == ' ') {
 				inFile >> std::skipws >> faceNum[0];
 				inFile >> std::skipws >> n;
-				inFile >> std::skipws >> t;
+				inFile >> std::skipws >> vtNum[0];
 				inFile >> std::skipws >> s;
 				inFile >> std::skipws >> vnNum[0];
 
-
 				inFile >> std::skipws >> faceNum[1];
 				inFile >> std::skipws >> n;
-				inFile >> std::skipws >> t;
+				inFile >> std::skipws >> vtNum[1];
 				inFile >> std::skipws >> s;
 				inFile >> std::skipws >> vnNum[1];
 
-
 				inFile >> std::skipws >> faceNum[2];
 				inFile >> std::skipws >> n;
-				inFile >> std::skipws >> t;
+				inFile >> std::skipws >> vtNum[2];
 				inFile >> std::skipws >> s;
 				inFile >> std::skipws >> vnNum[2];
 
 				inFile >> std::skipws >> faceNum[3];
 				inFile >> std::skipws >> n;
-				inFile >> std::skipws >> t;
+				inFile >> std::skipws >> vtNum[3];
 				inFile >> std::skipws >> s;
 				inFile >> std::skipws >> vnNum[3];
 
 				glm::vec4 temp = glm::vec4(faceNum[0], faceNum[1], faceNum[2], faceNum[3]); //1
 				glm::vec4 vntemp = glm::vec4(vnNum[0], vnNum[1], vnNum[2], vnNum[3]);// 1
+				glm::vec4 vttemp = glm::vec4(vtNum[0], vtNum[1], vtNum[2], vtNum[3]);// 1
+
 				face.push_back(temp);
 				Noramlface.push_back(vntemp);
+				vtface.push_back(vttemp);
 			}
 			head[1] = '\0';
 		}
@@ -95,7 +105,15 @@ void ReadObj2(const std::string objfilename, std::vector<glm::vec4>& vertex, std
 		normalVertex.push_back(normalData[(int)(iter->z) - 1]);
 		normalVertex.push_back(normalData[(int)(iter->w) - 1]);
 	}
+	for (auto iter = vtface.begin(); iter < vtface.end(); iter++) {
+		vtVertex.push_back(vtData[(int)(iter->x) - 1]);
+		vtVertex.push_back(vtData[(int)(iter->y) - 1]);
+		vtVertex.push_back(vtData[(int)(iter->z) - 1]);
+		vtVertex.push_back(vtData[(int)(iter->w) - 1]);
+	}
+
 	delete[] vertexData;
 	delete[] normalData;
+	delete[] vtData;
 	inFile.close();
 }

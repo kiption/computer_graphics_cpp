@@ -1,6 +1,6 @@
 #include "readObj.h"
 
-void ReadObj(const std::string objfilename, std::vector<glm::vec4>& vertex, std::vector<glm::vec4>& normalVertex, std::vector<glm::vec4>& vtVertex)
+void ReadObj(const std::string objfilename, std::vector<glm::vec4>& vertex, std::vector<glm::vec4>& normalVertex, std::vector<glm::vec2>& vtVertex)
 {
 	int lineCount = 0;
 	std::string line;
@@ -14,15 +14,19 @@ void ReadObj(const std::string objfilename, std::vector<glm::vec4>& vertex, std:
 	std::vector<glm::vec4>vtface;
 	while (std::getline(inFile, line)) {
 		if (line[0] == 'v' && line[1] == ' ') {
-			vertexNum++;
+			vertexNum++;	
+		}
+		if (line[0] == 'v' && line[1] == 'n') {
 			normalNum++;
+		}
+		if (line[0] == 'v' && line[1] == 't') {
 			cordiNum++;
 		}
 		std::cout << line << std::endl;
 	}
 	glm::vec4* vertexData = new glm::vec4[vertexNum];
 	glm::vec4* normalData = new glm::vec4[normalNum];
-	glm::vec4* cordinaterData = new glm::vec4[cordiNum];
+	glm::vec2* cordinaterData = new glm::vec2[cordiNum];
 
 	inFile.clear();
 	inFile.seekg(0, std::ios::beg);
@@ -48,8 +52,9 @@ void ReadObj(const std::string objfilename, std::vector<glm::vec4>& vertex, std:
 				normalNum++;
 			}
 			else if (head[1] == 't') {
-				inFile >> std::skipws >> cordinaterData[cordiNum].x >> cordinaterData[cordiNum].y >> cordinaterData[cordiNum].z;
-				normalNum++;
+				float trash;
+				inFile >> std::skipws >> cordinaterData[cordiNum].x >> cordinaterData[cordiNum].y >> trash;
+				cordiNum++;
 			}
 			head[1] = '\0';
 		}
@@ -83,7 +88,7 @@ void ReadObj(const std::string objfilename, std::vector<glm::vec4>& vertex, std:
 				inFile >> std::skipws >> vnNum[3];*/
 			
 				glm::vec4 temp = glm::vec4(faceNum[0], faceNum[1], faceNum[2], 1 );//faceNum[3]
-				glm::vec4 vttemp = glm::vec4(vtNum[0], vtNum[1], 1, 1);//vtNum[3]
+				glm::vec4 vttemp = glm::vec4(vtNum[0], vtNum[1], vtNum[2], 1); //vtNum[3]
 				glm::vec4 vntemp = glm::vec4( vnNum[0], vnNum[1], vnNum[2], 1 );//vnNum[3]
 				face.push_back(temp);
 				vtface.push_back(vttemp);
@@ -101,8 +106,8 @@ void ReadObj(const std::string objfilename, std::vector<glm::vec4>& vertex, std:
 	for (auto iter = vtface.begin(); iter < vtface.end(); iter++) {
 		vtVertex.push_back(cordinaterData[(int)(iter->x) - 1]);
 		vtVertex.push_back(cordinaterData[(int)(iter->y) - 1]);
-		//vtVertex.push_back(cordinaterData[(int)(iter->z) - 1]);                //ÅØ½ºÃÄ ÁÂÇ¥
-		//vertex.push_back(vertexData[(int)(iter->w) - 1]);
+		vtVertex.push_back(cordinaterData[(int)(iter->z) - 1]);                //ÅØ½ºÃÄ ÁÂÇ¥
+		//ve``rtex.push_back(vertexData[(int)(iter->w) - 1]);
 	}
 
 	for (auto iter = Noramlface.begin(); iter < Noramlface.end(); iter++) {

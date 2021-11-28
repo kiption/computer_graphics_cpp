@@ -34,7 +34,7 @@ GLvoid drawscene(GLvoid);
 GLvoid reshape(int w, int h);
 GLvoid keyboard(unsigned char key, int x, int y);
 void drawmodels();
-
+void locationPlane();
 int windowWidth, windowHeight;
 
 float CameraTheta = 0.0f;
@@ -51,27 +51,39 @@ bool SquareRotateA = false;
 bool SquareRotateB = false;
 bool SquareRevoluteA = false;
 bool SquareRevoluteB = false;
-
+bool LightRotateA = false;
+bool LightRotateB = false;
 bool FirstPersonView = false;
 bool ChangeModel = false;
 
+struct Plane {
+    float x;
+    float y;
+    float z;
+};
 //조명 초기위치
-float ScaleZ = 5.0f;
-float ScaleY = 1.0f;
+float ScaleZ = -5.0f;
+float ScaleY = -2.0f;
 
-unsigned int cubetexture[2];
+unsigned int cubetexture[8];
+
+Plane PlaneLocate[6];
 
 CameraViewPoint PrimeCameraPoint;
 
-GLuint VAO[2], VBO[6];
+GLuint VAO[3], VBO[9];
 GLuint shaderID;
 GLuint qobjshader;
 GLuint vertexshader;
 GLuint fragmentshader;
+GLuint triangleshaderProgram;
 
-vector<glm::vec4>ModelsValue[2];
-vector<glm::vec4>normalValue[2];
-vector<glm::vec2>vtValue[2];
+vector<glm::vec4>ModelsValue[3];
+vector<glm::vec4>normalValue[3];
+vector<glm::vec2>vtValue[3];
+
+vector<float>ObitalValue;
+vector<float>LightOrbitalValue;
 
 glm::vec3 LightColor = glm::vec3(1.0f, 1.0f, 1.0f);
 
@@ -90,10 +102,10 @@ int main(int argc, char** argv) {
     else {
         cout << "GLEW initialized" << endl;
     }
-
-    ReadObj("cube3_.obj", ModelsValue[0],normalValue[0], vtValue[0]);
-    ReadObj("pyramid.obj", ModelsValue[1],normalValue[1], vtValue[1]);
-    
+    locationPlane();
+    ReadObj("cube3_.obj", ModelsValue[0], normalValue[0], vtValue[0]);
+    ReadObj("pyramid.obj", ModelsValue[1], normalValue[1], vtValue[1]);
+    ReadObj("plane3.obj", ModelsValue[2], normalValue[2], vtValue[2]);
     make_vertexShaders();
     make_fragmentShaders();
     make_shaderProgram();
@@ -187,34 +199,45 @@ GLuint make_shaderProgram() {
 
     return shaderID;
 }
+void locationPlane() {
+    float x[6] = { 0.0, 0.0, 10.0, -10.0, 0.0, 0.0 };
+    float y[6] = { 10.0, -9.98, 0.0, 0.0, 0.0, 0.0 };
+    float z[6] = { 0.0, 0.0, 0.0, 0.0, 10.0, -10.0 };
 
+    for (int i = 0; i < 6; i++) {
+        PlaneLocate[i].x = x[i];
+        PlaneLocate[i].y = y[i];
+        PlaneLocate[i].z = z[i];
+    }
+
+}
 
 void drawmodels() {
     //고정 물체 사각형
     if (ChangeModel) {
-        glUseProgram(shaderID);
+       
         glBindVertexArray(VAO[0]);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, cubetexture[0]);        
+        glBindTexture(GL_TEXTURE_2D, cubetexture[0]);
         glUniform1i(glGetUniformLocation(shaderID, "texture1"), 0);
-            
+
         glm::mat4 HexaUpModel = glm::mat4(1.0f);
         HexaUpModel = glm::rotate(HexaUpModel, glm::radians(SquareRevolute), glm::vec3(1.0f, 0.0f, 0.0f));
         HexaUpModel = glm::rotate(HexaUpModel, glm::radians(SquareRotate), glm::vec3(0.0f, 1.0f, 0.0f));
         unsigned int ModelUpLocation = glGetUniformLocation(shaderID, "ModelTransform");
         glUniformMatrix4fv(ModelUpLocation, 1, GL_FALSE, glm::value_ptr(HexaUpModel));
-        
+
         glm::mat4 CubeNormalModel = glm::mat4(1.0f);
         CubeNormalModel = glm::rotate(CubeNormalModel, glm::radians(SquareRevolute), glm::vec3(1.0f, 0.0f, 0.0f));
         CubeNormalModel = glm::rotate(CubeNormalModel, glm::radians(SquareRotate), glm::vec3(0.0f, 1.0f, 0.0f));
         unsigned int ModelNormalLocation = glGetUniformLocation(shaderID, "NormalTransform");
         glUniformMatrix4fv(ModelNormalLocation, 1, GL_FALSE, glm::value_ptr(CubeNormalModel));
-    
-        glDrawArrays(GL_TRIANGLES, 0, ModelsValue[0].size());              
+
+        glDrawArrays(GL_TRIANGLES, 0, ModelsValue[0].size());
 
     }
     else {
-        glUseProgram(shaderID);
+       
         glBindVertexArray(VAO[1]);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, cubetexture[1]);
@@ -233,6 +256,49 @@ void drawmodels() {
         glUniformMatrix4fv(ModelNormalLocation, 1, GL_FALSE, glm::value_ptr(CubeNormalModel));
         glDrawArrays(GL_TRIANGLES, 0, ModelsValue[1].size());
     }
+
+    for (int i = 0; i < 6; i++) {
+        glBindVertexArray(VAO[2]);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, cubetexture[i + 2]);
+        glUniform1i(glGetUniformLocation(shaderID, "texture1"), 0);
+
+        glm::mat4 SkyCubeModel = glm::mat4(1.0f);
+        SkyCubeModel = glm::translate(SkyCubeModel, glm::vec3(PlaneLocate[i].x, PlaneLocate[i].y, PlaneLocate[i].z));
+
+        if (i == 0) {
+            SkyCubeModel = glm::rotate(SkyCubeModel, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        }
+        else if (i == 1) {
+            SkyCubeModel = glm::rotate(SkyCubeModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        }
+        else if (i == 2) {
+            SkyCubeModel = glm::rotate(SkyCubeModel, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            SkyCubeModel = glm::rotate(SkyCubeModel, glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        }
+        else if (i == 3) {
+            SkyCubeModel = glm::rotate(SkyCubeModel, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            SkyCubeModel = glm::rotate(SkyCubeModel, glm::radians(270.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        }
+        else if (i == 4) {
+            SkyCubeModel = glm::rotate(SkyCubeModel, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+            SkyCubeModel = glm::rotate(SkyCubeModel, glm::radians(270.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        }
+        else if (i == 5) {
+            SkyCubeModel = glm::rotate(SkyCubeModel, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        }
+        SkyCubeModel = glm::scale(SkyCubeModel, glm::vec3(20.0f, 20.0f, 20.0f));
+
+        unsigned int SkyCubeLocation = glGetUniformLocation(shaderID, "ModelTransform");
+        glUniformMatrix4fv(SkyCubeLocation, 1, GL_FALSE, glm::value_ptr(SkyCubeModel));
+
+        glm::mat4 SkyCubeNormalModel = glm::mat4(1.0f);
+        SkyCubeNormalModel = glm::rotate(SkyCubeNormalModel, glm::radians(SquareRevolute), glm::vec3(1.0f, 0.0f, 0.0f));
+        SkyCubeNormalModel = glm::rotate(SkyCubeNormalModel, glm::radians(SquareRotate), glm::vec3(0.0f, 1.0f, 0.0f));
+        unsigned int SkyCubeNormalLocation = glGetUniformLocation(shaderID, "NormalTransform");
+        glUniformMatrix4fv(SkyCubeNormalLocation, 1, GL_FALSE, glm::value_ptr(SkyCubeNormalModel));
+        glDrawArrays(GL_TRIANGLES, 0, ModelsValue[2].size());
+    }
 }
 
 GLvoid drawscene() {
@@ -243,10 +309,47 @@ GLvoid drawscene() {
 
     glUseProgram(shaderID);
 
+    /*glm::mat4 BackgroundCameraView = glm::mat4(1.0f);
+    unsigned int BackgroundViewLocation = glGetUniformLocation(shaderID, "ViewTransform");
+    glUniformMatrix4fv(BackgroundViewLocation, 1, GL_FALSE, glm::value_ptr(BackgroundCameraView));
+
+    glm::vec3 BackgroundView = glm::vec3(1.0f);
+    unsigned int BackgroundPositionLocation = glGetUniformLocation(shaderID, "ViewPosTransform");
+    glUniform3fv(BackgroundPositionLocation, 1, glm::value_ptr(BackgroundView));
+    
+    glm::mat4 BackgroundProj = glm::mat4(1.0f);
+    unsigned int BackgroundProjLocation = glGetUniformLocation(shaderID, "ProjectionTransform");
+    glUniformMatrix4fv(BackgroundProjLocation, 1, GL_FALSE, glm::value_ptr(BackgroundProj));
+
+    glm::vec3 BackgroundLight = glm::vec3(1.0f);
+    glm::mat4 BackGroundPosition = glm::mat4(1.0f);
+    unsigned int lightPosLocation = glGetUniformLocation(shaderID, "LightPos");
+    glUniform3fv(lightPosLocation, 1, glm::value_ptr(glm::vec3(0, 0, 0)));
+    unsigned int lightColorLocation = glGetUniformLocation(shaderID, "LightColor");
+    glUniform3fv(lightColorLocation, 1, glm::value_ptr(BackgroundLight));
+    unsigned int LightTransformLocation = glGetUniformLocation(shaderID, "LightTransform");
+    glUniformMatrix4fv(LightTransformLocation, 1, GL_FALSE, glm::value_ptr(BackGroundPosition));
+
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, cubetexture[2]);
+    glUniform1i(glGetUniformLocation(shaderID, "texture1"), 0);
+    glm::mat4 BackgroundModel = glm::mat4(1.0f);
+    BackgroundModel = glm::translate(BackgroundModel, glm::vec3(0.0f, 0.0f, -10.0f));
+    BackgroundModel = glm::scale(BackgroundModel, glm::vec3(10.0f, 10.0f, 10.0f));
+
+    unsigned int BackgroundLocation = glGetUniformLocation(shaderID, "ModelTransform");
+    glUniformMatrix4fv(BackgroundLocation, 1, GL_FALSE, glm::value_ptr(BackgroundModel));
+    glm::mat4 BackgroundNormalModel = glm::mat4(1.0f);
+    unsigned int BackgroundNormalLocation = glGetUniformLocation(shaderID, "NormalTransform");
+    glUniformMatrix4fv(BackgroundNormalLocation, 1, GL_FALSE, glm::value_ptr(BackgroundNormalModel));
+    glDrawArrays(GL_TRIANGLES, 0, cubetexture[2]);*/
+
     cameraFun(FirstPersonView, ObjectThetaX, ObjectThetaY, CameraTheta, PrimeCameraPoint, shaderID, windowWidth, windowHeight);
 
     LightFun(LightColor, LightRaidian, ScaleY, shaderID, ScaleZ);
 
+    
     drawmodels();
 
     glutSwapBuffers();
@@ -263,12 +366,12 @@ void resize(int width, int height) {
 }
 
 void initbuffer() {
-   
-    glGenVertexArrays(2, VAO);
 
-    for (int i = 0; i < 2; i++) {
+    glGenVertexArrays(3, VAO);
+
+    for (int i = 0; i < 3; i++) {
         glBindVertexArray(VAO[i]);
-        glGenBuffers(3, &VBO[3*i]);
+        glGenBuffers(3, &VBO[3 * i]);
         glBindBuffer(GL_ARRAY_BUFFER, VBO[3 * i]);
         glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec4) * ModelsValue[i].size(), &ModelsValue[i][0], GL_STREAM_DRAW);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec4), (void*)0); //--- 위치 속성
@@ -287,7 +390,7 @@ void initbuffer() {
 }
 
 void initTexture() {
-    glGenTextures(2, &cubetexture[0]);
+    glGenTextures(8, &cubetexture[0]);
     glBindTexture(GL_TEXTURE_2D, cubetexture[0]);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -311,16 +414,92 @@ void initTexture() {
     glGenerateMipmap(GL_TEXTURE_2D);
     stbi_image_free(pyradata);
 
+
+    //배경 스카이큐브 top
+    glBindTexture(GL_TEXTURE_2D, cubetexture[2]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    int topwidthImage, topheightImage, topnumberOfChannel;
+    unsigned char* topdata = stbi_load("top.jpg", &topwidthImage, &topheightImage, &topnumberOfChannel, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, topwidthImage, topheightImage, 0, GL_RGB, GL_UNSIGNED_BYTE, topdata);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(topdata);
+
+    //bottom
+    glBindTexture(GL_TEXTURE_2D, cubetexture[3]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    int bottomwidthImage, bottomheightImage, bottomnumberOfChannel;
+    unsigned char* bottomdata = stbi_load("bottom.jpg", &bottomwidthImage, &bottomheightImage, &bottomnumberOfChannel, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, bottomwidthImage, bottomheightImage, 0, GL_RGB, GL_UNSIGNED_BYTE, bottomdata);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(bottomdata);
+
+    //left
+    glBindTexture(GL_TEXTURE_2D, cubetexture[4]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    int leftwidthImage, leftheightImage, leftnumberOfChannel;
+    unsigned char* leftdata = stbi_load("left.jpg", &leftwidthImage, &leftheightImage, &leftnumberOfChannel, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, leftwidthImage, leftheightImage, 0, GL_RGB, GL_UNSIGNED_BYTE, leftdata);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(leftdata);
+
+    //right
+    glBindTexture(GL_TEXTURE_2D, cubetexture[5]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    int rightwidthImage, rightheightImage, rightnumberOfChannel;
+    unsigned char* rightdata = stbi_load("right.jpg", &rightwidthImage, &rightheightImage, &rightnumberOfChannel, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, rightwidthImage, rightheightImage, 0, GL_RGB, GL_UNSIGNED_BYTE, rightdata);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(rightdata);
+
+    //front
+    glBindTexture(GL_TEXTURE_2D, cubetexture[6]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    int frontwidthImage, frontheightImage, frontnumberOfChannel;
+    unsigned char* frontdata = stbi_load("front.jpg", &frontwidthImage, &frontheightImage, &frontnumberOfChannel, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, frontwidthImage, frontheightImage, 0, GL_RGB, GL_UNSIGNED_BYTE, frontdata);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(frontdata);
+
+    //back
+    glBindTexture(GL_TEXTURE_2D, cubetexture[7]);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    int backwidthImage, backheightImage, backnumberOfChannel;
+    unsigned char* backdata = stbi_load("back.jpg", &backwidthImage, &backheightImage, &backnumberOfChannel, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, backwidthImage, backheightImage, 0, GL_RGB, GL_UNSIGNED_BYTE, backdata);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(backdata);
 }
 
 GLvoid keyboard(unsigned char key, int x, int y) {
     switch (key)
     {
     case 'x':
-        PrimeCameraPoint.ViewX += 0.2f;
+        if (PrimeCameraPoint.ViewX < 8.0f) {
+            PrimeCameraPoint.ViewX += 0.2f;
+        }
         break;
     case 'X':
-        PrimeCameraPoint.ViewX -= 0.2f;
+        if (PrimeCameraPoint.ViewX > -8.0f) {
+            PrimeCameraPoint.ViewX -= 0.2f;
+        }
         break;
     case 'y':
         CameraRotationA = !CameraRotationA;
@@ -331,10 +510,14 @@ GLvoid keyboard(unsigned char key, int x, int y) {
         CameraRotationA = false;
         break;
     case 'z':
-        PrimeCameraPoint.ViewZ += 0.2f;
+        if (PrimeCameraPoint.ViewZ < 8.0f) {
+            PrimeCameraPoint.ViewZ += 0.2f;
+        }
         break;
     case 'Z':
-        PrimeCameraPoint.ViewZ -= 0.2f; 
+        if (PrimeCameraPoint.ViewZ > -8.0f) {
+            PrimeCameraPoint.ViewZ -= 0.2f;
+        }
         break;
     case 'm':
         ScaleY = 20.0f;
@@ -366,17 +549,6 @@ GLvoid keyboard(unsigned char key, int x, int y) {
         break;
     case 'c':
         ChangeModel = !ChangeModel;
-        break;
-    case 's':
-        CameraRotationB = false;
-        CameraRotationA = false;
-        SquareRotateA = false;
-        SquareRotateB = false;
-        SquareRevoluteA = false;
-        SquareRevoluteB = false;
-        SquareRotate = 0.0f;
-        SquareRevolute = 0.0f;
-        ObjectThetaY = 0.0f;
         break;
     case 'q':
         exit(0);

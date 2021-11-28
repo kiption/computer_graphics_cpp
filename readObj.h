@@ -6,4 +6,4 @@
 #include<string>
 #include<glm/glm/glm.hpp>
 #include<iostream>
-void ReadObj(const std::string objfilename, std::vector<glm::vec4>& vertex, std::vector<glm::vec4>& normalVertex, std::vector<glm::vec4>& vtVertex);
+void ReadObj(const std::string objfilename, std::vector<glm::vec4>& vertex, std::vector<glm::vec4>& normalVertex, std::vector<glm::vec2>& vtVertex);
